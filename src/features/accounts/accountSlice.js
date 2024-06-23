@@ -1,48 +1,54 @@
-const initialStateAccount = {
+import { createSlice } from "@reduxjs/toolkit";
+
+const initialState = {
   balance: 0,
   loan: 0,
   loanPurpose: "",
   isLoading: false,
 };
 
-export default function accountReducer(state = initialStateAccount, action) {
-  switch (action.type) {
-    case "account/deposit":
-      return {
-        ...state,
-        balance: state.balance + action.payload,
-        isLoading: false,
-      };
+const accountSlice = createSlice({
+  name: "account",
+  initialState,
+  reducers: {
+    deposit(state, action) {
+      state.balance += action.payload;
+      state.isLoading = false;
+    },
 
-    case "account/withdraw":
-      return { ...state, balance: state.balance - action.payload };
-    case "account/requestLoan":
-      if (state.loan > 0) return state;
-      return {
-        ...state,
-        loan: action.payload.amount,
-        balance: state.balance + action.payload.amount,
-        loanPurpose: action.payload.purpose,
-      };
-    case "account/payLoan":
+    withdraw(state, action) {
+      state.balance -= action.payload;
+    },
+
+    requestLoan: {
+      prepare(amount, purpose) {
+        return { payload: { amount, purpose } };
+      },
+
+      reducer(state, action) {
+        if (state.loan > 0) return;
+
+        state.balance += action.payload.amount;
+        state.loan = action.payload.amount;
+        state.loanPurpose = action.payload.purpose;
+      },
+    },
+
+    payLoan(state) {
       if (state.balance < state.loan) return;
 
-      return {
-        ...state,
-        loan: 0,
-        loanPurpose: "",
-        balance: state.balance - state.loan,
-      };
-    case "account/conversionInProgress":
-      return {
-        ...state,
-        isLoading: true,
-      };
-    default:
-      return state;
-  }
-}
+      state.balance -= state.loan;
+      state.loan = 0;
+      state.loanPurpose = "";
+    },
 
+    conversionInProgress(state) {
+      state.isLoading = true;
+    },
+  },
+});
+
+export const { withdraw, requestLoan, payLoan } = accountSlice.actions;
 export const deposit = (amount, currency) => {
   if (currency === "USD") return { type: "account/deposit", payload: amount };
 
@@ -58,19 +64,74 @@ export const deposit = (amount, currency) => {
   };
 };
 
-export const withdraw = (amount) => {
-  return { type: "account/withdraw", payload: amount };
-};
+export default accountSlice.reducer;
 
-export const requestLoan = (amount, purpose) => {
-  return {
-    type: "account/requestLoan",
-    payload: { amount, purpose },
-  };
-};
+// export default function accountReducer(state = initialStateAccount, action) {
+//   switch (action.type) {
+//     case "account/deposit":
+//       return {
+//         ...state,
+//         balance: state.balance + action.payload,
+//         isLoading: false,
+//       };
 
-export const payLoan = () => {
-  return {
-    type: "account/payLoan",
-  };
-};
+//     case "account/withdraw":
+//       return { ...state, balance: state.balance - action.payload };
+//     case "account/requestLoan":
+//       if (state.loan > 0) return state;
+//       return {
+//         ...state,
+//         loan: action.payload.amount,
+//         balance: state.balance + action.payload.amount,
+//         loanPurpose: action.payload.purpose,
+//       };
+//     case "account/payLoan":
+//       if (state.balance < state.loan) return state;
+
+//       return {
+//         ...state,
+//         loan: 0,
+//         loanPurpose: "",
+//         balance: state.balance - state.loan,
+//       };
+//     case "account/conversionInProgress":
+//       return {
+//         ...state,
+//         isLoading: true,
+//       };
+//     default:
+//       return state;
+//   }
+// }
+
+// export const deposit = (amount, currency) => {
+//   if (currency === "USD") return { type: "account/deposit", payload: amount };
+
+//   return async (dispatch, getState) => {
+//     dispatch({ type: "account/conversionInProgress" });
+
+//     const res = await fetch(
+//       `https://api.frankfurter.app/latest?amount=${amount}&from=${currency}&to=USD`
+//     );
+//     const data = await res.json();
+
+//     dispatch({ type: "account/deposit", payload: data.rates.USD });
+//   };
+// };
+
+// export const withdraw = (amount) => {
+//   return { type: "account/withdraw", payload: amount };
+// };
+
+// export const requestLoan = (amount, purpose) => {
+//   return {
+//     type: "account/requestLoan",
+//     payload: { amount, purpose },
+//   };
+// };
+
+// export const payLoan = () => {
+//   return {
+//     type: "account/payLoan",
+//   };
+// };
